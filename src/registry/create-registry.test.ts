@@ -153,4 +153,45 @@ describe("createRegistry + sync()", () => {
     await registry.sync();
     expect(registry.getAll()).toHaveLength(0);
   });
+
+  it("override flag present in debug log for locally-overriding skills only", async () => {
+    makeCliSuccess(twoGlobalSkills);
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => undefined);
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const registry = createRegistry({
+      localSkillsDir: join(__dirname, "..", "local-loader", "fixtures", "skills"),
+    });
+    await registry.sync();
+    // custom-deploy comes from local only — not an override (no global counterpart)
+    // run-tests and deploy-to-vercel come from global only
+    const calls = debugSpy.mock.calls.map((c) => c[1] as Record<string, unknown>);
+    const overrideCalls = calls.filter((c) => c["override"] === true);
+    expect(overrideCalls).toHaveLength(0); // no skill is overriding a global in this fixture
+    debugSpy.mockRestore();
+  });
+
+  it("getSkill() for unknown id triggers scaffold warn — still returns undefined", async () => {
+    makeCliSuccess(twoGlobalSkills);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const registry = createRegistry({ localSkillsDir: "/tmp/nonexistent-skills" });
+    await registry.sync();
+    const result = registry.getSkill("does-not-exist");
+    expect(result).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("does-not-exist"),
+      expect.anything(),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("getSkill() for known id does not trigger scaffold", async () => {
+    makeCliSuccess(twoGlobalSkills);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const registry = createRegistry({ localSkillsDir: "/tmp/nonexistent-skills" });
+    await registry.sync();
+    const result = registry.getSkill("run-tests");
+    expect(result?.skill_id).toBe("run-tests");
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
 });

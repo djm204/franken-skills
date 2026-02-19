@@ -79,37 +79,42 @@ export class SkillRegistry {
   /**
    * Pure merge of global and local skill arrays with local-first precedence.
    * Duplicates within the same source are logged as errors (first wins).
-   * Used by sync() to compute the resolved inventory before populating the store.
+   * Returns both the resolved Map and a Set of skill_ids that are local overrides
+   * of a global skill (used by sync() to annotate the inventory log).
    */
   static resolveSkills(
     globals: UnifiedSkillContract[],
     locals: UnifiedSkillContract[],
-  ): Map<string, UnifiedSkillContract> {
-    const resolved = new Map<string, UnifiedSkillContract>();
+  ): { skills: Map<string, UnifiedSkillContract>; overrides: Set<string> } {
+    const skills = new Map<string, UnifiedSkillContract>();
+    const overrides = new Set<string>();
 
     for (const skill of globals) {
-      if (resolved.has(skill.skill_id)) {
+      if (skills.has(skill.skill_id)) {
         console.error(
           `[SkillRegistry] Duplicate skill_id "${skill.skill_id}" in global source: keeping first.`,
           { skill_id: skill.skill_id, source: "GLOBAL" },
         );
         continue;
       }
-      resolved.set(skill.skill_id, skill);
+      skills.set(skill.skill_id, skill);
     }
 
     for (const skill of locals) {
-      if (resolved.has(skill.skill_id) && resolved.get(skill.skill_id)?.metadata.source === "LOCAL") {
+      if (skills.has(skill.skill_id) && skills.get(skill.skill_id)?.metadata.source === "LOCAL") {
         console.error(
           `[SkillRegistry] Duplicate skill_id "${skill.skill_id}" in local source: keeping first.`,
           { skill_id: skill.skill_id, source: "LOCAL" },
         );
         continue;
       }
-      // Local always wins over global
-      resolved.set(skill.skill_id, skill);
+      if (skills.has(skill.skill_id)) {
+        // Local is overriding a global — track it
+        overrides.add(skill.skill_id);
+      }
+      skills.set(skill.skill_id, skill);
     }
 
-    return resolved;
+    return { skills, overrides };
   }
 }

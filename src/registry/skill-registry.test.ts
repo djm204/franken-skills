@@ -127,19 +127,28 @@ describe("SkillRegistry — resolveSkills", () => {
     const global1 = makeContract({ skill_id: "a", metadata: { name: "A", description: "Global A", source: "GLOBAL" } });
     const global2 = makeContract({ skill_id: "b", metadata: { name: "B", description: "Global B", source: "GLOBAL" } });
     const local1 = makeContract({ skill_id: "b", metadata: { name: "B-local", description: "Local B", source: "LOCAL" } });
-    const resolved = SkillRegistry.resolveSkills([global1, global2], [local1]);
-    expect(resolved.get("a")?.metadata.source).toBe("GLOBAL");
-    expect(resolved.get("b")?.metadata.source).toBe("LOCAL");
-    expect(resolved.size).toBe(2);
+    const { skills } = SkillRegistry.resolveSkills([global1, global2], [local1]);
+    expect(skills.get("a")?.metadata.source).toBe("GLOBAL");
+    expect(skills.get("b")?.metadata.source).toBe("LOCAL");
+    expect(skills.size).toBe(2);
+  });
+
+  it("resolveSkills populates overrides set for local-over-global replacements", () => {
+    const globalB = makeContract({ skill_id: "b", metadata: { name: "B", description: "Global B", source: "GLOBAL" } });
+    const localB = makeContract({ skill_id: "b", metadata: { name: "B-local", description: "Local B", source: "LOCAL" } });
+    const globalA = makeContract({ skill_id: "a", metadata: { name: "A", description: "Global A", source: "GLOBAL" } });
+    const { overrides } = SkillRegistry.resolveSkills([globalA, globalB], [localB]);
+    expect(overrides.has("b")).toBe(true);
+    expect(overrides.has("a")).toBe(false);
   });
 
   it("two local skills with same skill_id — first wins, error logged", () => {
     const local1 = makeContract({ skill_id: "dup", metadata: { name: "First", description: "First local", source: "LOCAL" } });
     const local2 = makeContract({ skill_id: "dup", metadata: { name: "Second", description: "Second local", source: "LOCAL" } });
     const logSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const resolved = SkillRegistry.resolveSkills([], [local1, local2]);
-    expect(resolved.size).toBe(1);
-    expect(resolved.get("dup")?.metadata.description).toBe("First local");
+    const { skills } = SkillRegistry.resolveSkills([], [local1, local2]);
+    expect(skills.size).toBe(1);
+    expect(skills.get("dup")?.metadata.description).toBe("First local");
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("dup"), expect.anything());
     logSpy.mockRestore();
   });
