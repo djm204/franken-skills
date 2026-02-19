@@ -14,6 +14,8 @@ export class SkillRegistryError extends Error {
     super(message);
     this.name = "SkillRegistryError";
     this.code = code;
-    this.skill_id = skill_id;
+    if (skill_id !== undefined) {
+      this.skill_id = skill_id;
+    }
   }
 }

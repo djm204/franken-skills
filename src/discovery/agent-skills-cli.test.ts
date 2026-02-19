@@ -19,8 +19,8 @@ vi.mock("node:child_process", () => ({
 import { execFile } from "node:child_process";
 const mockExecFile = vi.mocked(execFile);
 
-function makeExecFileImpl(stdout: string, exitCode = 0): Parameters<typeof vi.mocked<typeof execFile>>[0] {
-  return (_cmd: unknown, _args: unknown, _opts: unknown, callback: unknown) => {
+function makeExecFileImpl(stdout: string, exitCode = 0): typeof execFile {
+  const impl = (_cmd: unknown, _args: unknown, _opts: unknown, callback: unknown): ReturnType<typeof execFile> => {
     const cb = callback as (err: Error | null, stdout: string, stderr: string) => void;
     if (exitCode !== 0) {
       const err = new Error("Command failed") as NodeJS.ErrnoException;
@@ -31,6 +31,7 @@ function makeExecFileImpl(stdout: string, exitCode = 0): Parameters<typeof vi.mo
     }
     return {} as ReturnType<typeof execFile>;
   };
+  return impl as unknown as typeof execFile;
 }
 
 describe("AgentSkillsCli", () => {
