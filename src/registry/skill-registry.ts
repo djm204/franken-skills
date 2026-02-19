@@ -11,6 +11,12 @@ export class SkillRegistry {
     this.synced = true;
   }
 
+  /** Clears the store. Called by sync() before re-populating so stale skills don't persist. */
+  protected clearStore(): void {
+    this.store.clear();
+    this.synced = false;
+  }
+
   isSynced(): boolean {
     return this.synced;
   }

@@ -24,6 +24,9 @@ class ManagedSkillRegistry extends SkillRegistry implements ISkillRegistry {
   }
 
   async sync(): Promise<void> {
+    // Clear stale state so removed skills don't persist across re-syncs
+    this["clearStore"]();
+
     const [globals, locals] = await Promise.all([
       this.discovery.discover(),
       this.localLoader.load(this.localSkillsDir),
@@ -32,7 +35,6 @@ class ManagedSkillRegistry extends SkillRegistry implements ISkillRegistry {
     const resolved = SkillRegistry.resolveSkills(globals, locals);
 
     for (const contract of resolved.values()) {
-      // Use internal register — bypass the pre-sync guard
       super.register(contract);
     }
 
