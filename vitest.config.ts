@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
+    include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
     coverage: {
       provider: "v8",
       thresholds: {
